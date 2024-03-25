@@ -1,0 +1,56 @@
+version: "3.7"
+services:
+  db:
+    image: postgres
+    container_name: "warp-db"
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: '${DB_PASSWORD:-warp}'
+      POSTGRES_USER: 'warp'
+      POSTGRES_DB: 'warp'
+    volumes:
+      - "db:/var/lib/postgresql/data"
+    networks:
+      - network
+
+  app:
+    build: .
+    container_name: "warp-app"
+    restart: unless-stopped
+    depends_on:
+    - db
+    environment:
+      WARP_DATABASE: "postgresql://warp:postgres_password@db:5432/warp"
+      WARP_SECRET_KEY: 'mysecretkey'
+      WARP_DATABASE_INIT_SCRIPT: '["sql/schema.sql","sql/sample_data.sql"]'
+      WARP_LANGUAGE_FILE: 'i18n/en.js'
+    networks:
+      - network
+
+  nginx:
+    image: nginx
+    container_name: "warp-nginx"
+    restart: unless-stopped
+    depends_on:
+    - frontend
+    volumes:
+      # set the SSL cert and key
+      - ${SSL_CRT:?}:/etc/nginx/certs/warp.crt:ro
+      - ${SSL_KEY:?}:/etc/nginx/certs/warp.key:ro  
+
+      - ./res/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - '${PORT:-80}:80'
+      - '${SECURE_PORT:-443}:443'
+      - ${STATUS_PORT:-8080}:8080 # stub_status
+    networks:
+      - network
+
+volumes:
+  db: {}
+
+# network for communication
+networks:
+  network:
+    name: "warp-network"
+    driver: bridge
