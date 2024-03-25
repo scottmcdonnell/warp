@@ -20,7 +20,7 @@ services:
     depends_on:
     - db
     environment:
-      WARP_DATABASE: "postgresql://warp:postgres_password@db:5432/warp"
+      WARP_DATABASE: "postgresql://warp:${DB_PASSWORD:-warp}@db:5432/warp"
       WARP_SECRET_KEY: 'mysecretkey'
       WARP_DATABASE_INIT_SCRIPT: '["sql/schema.sql","sql/sample_data.sql"]'
       WARP_LANGUAGE_FILE: 'i18n/en.js'
@@ -32,7 +32,7 @@ services:
     container_name: "warp-nginx"
     restart: unless-stopped
     depends_on:
-    - frontend
+    - app
     volumes:
       # set the SSL cert and key
       - ${SSL_CRT:?}:/etc/nginx/certs/warp.crt:ro
